@@ -1,4 +1,4 @@
-function xyz= BISECT(al,bl,fl)
+function xyz= bisect(al,bl,fl)
   h=0.01;
   A=al;
   B=A+h;
