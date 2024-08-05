@@ -1,5 +1,4 @@
 function [A, B] = bisectHM(k, Eo, xi, y_0, y1_0, xf, ddy, N)
-function [A, B] = bisectHM(k, Eo, xi, y_0, y1_0, xf, ddy, N)
     Ev = [];
     E = [];
     for j = 1:k-1
