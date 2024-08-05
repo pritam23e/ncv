@@ -1,4 +1,5 @@
 function [A, B] = bisectHM(k, Eo, xi, y_0, y1_0, xf, ddy, N)
+function [A, B] = bisectHM(k, Eo, xi, y_0, y1_0, xf, ddy, N)
     Ev = [];
     E = [];
     for j = 1:k-1
@@ -14,10 +15,12 @@ function [A, B] = bisectHM(k, Eo, xi, y_0, y1_0, xf, ddy, N)
         if D(end)*H(end) < 0
             a = Ep;
             b = En;
+            G=EulerHM(xi, y_0, y1_0, xf, ddy, a, N);
+           
             while abs(b-a) > 1e-6
                 c = (a+b)/2;
                 fc = EulerHM(xi, y_0, y1_0, xf, ddy, c, N);
-                if fc(end)*D(end) < 0
+                if fc(end)*G(end) < 0
                     b = c;
                 else
                     a = c;
