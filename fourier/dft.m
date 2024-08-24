@@ -30,3 +30,5 @@ subplot(2,1,2)
 plot(w,abs(fw))
 title("fourier transform")
 
+
+
