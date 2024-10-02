@@ -33,9 +33,9 @@ threshold_value = 850
 debounce_time = 200  # Debounce time in milliseconds
 min_interval = 500  # Minimum interval between claps in a sequence (milliseconds)
 ignore_time = 50  # Ignore time in milliseconds (to ignore subsequent values)
-max_interval = 1200
+max_interval = 1500
 count = 0
-last_clap_time = 0
+last_tap_time = 0
 ignore_until = 0
 F = []
 P = []
@@ -107,7 +107,7 @@ while running:
         # Check if data is not empty
         if data_decoded:
             try:
-                sound_value = int(data_decoded)
+                sense_value = int(data_decoded)
             except ValueError:
                 # If conversion to int fails, skip this iteration
                 continue
@@ -116,14 +116,15 @@ while running:
             current_time = int(time.time() * 1000)
 
             # Check if sound value is greater than threshold value
-            if sound_value > threshold_value:
+            if sense_value > threshold_value:
                 # Check if the debounce time has passed since the last clap
-                if current_time - last_clap_time > debounce_time and current_time > ignore_until:
+                if current_time - last_tap_time > debounce_time and current_time > ignore_until:
+                    current_color = GREEN  # Turn the box green
                     # Check if the interval between claps is less than min_interval
-                    if current_time - last_clap_time < min_interval:
+                    if current_time - last_tap_time < min_interval:
                         count += 1
                     else:
-                        if current_time - last_clap_time < max_interval:
+                        if current_time - last_tap_time < max_interval:
                             # If the interval is too large, start a new sequence
                             print(f"Final count: {count}")
                             if count == 1:
@@ -132,7 +133,7 @@ while running:
                                 F.append(5)
                             print(f"F={F}")
 
-                        if current_time - last_clap_time > max_interval:
+                        if current_time - last_tap_time > max_interval:
                             if count == 1:
                                 F.append(1)
                             if count >= 2:
@@ -151,12 +152,12 @@ while running:
                                 print(f"M={M}")
                         count = 1
 
-                    last_clap_time = current_time
+                    last_tap_time = current_time
                     ignore_until = current_time + ignore_time
                     print(f"Clap detected! Consecutive count: {count}")
 
     # Check if the green box should revert to red after the duration
-    if current_color == GREEN and time.time() - (last_clap_time / 1000) > green_duration:
+    if current_color == GREEN and time.time() - (last_tap_time / 1000) > green_duration:
         current_color = RED
 
     # Fill the window with a white background
