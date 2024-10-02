@@ -2,17 +2,18 @@ import serial
 import time
 
 # Open serial port
-ser = serial.Serial('/dev/ttyACM2', 38400)
+ser = serial.Serial('COM3', 19200)
 
-threshold_value = 580
+threshold_value = 850
 debounce_time = 200  # Debounce time in milliseconds
 min_interval = 500  # Minimum interval between claps in a sequence (milliseconds)
 ignore_time = 50  # Ignore time in milliseconds (to ignore subsequent values)
-
+max_interval=1000
 count = 0
 last_clap_time = 0
 ignore_until = 0
 F=[]
+P=[]
 
 while True:
     # Read data from Arduino
@@ -44,11 +45,20 @@ while True:
                 if current_time - last_clap_time < min_interval:
                     count += 1
                 else:
-                    # If the interval is too large, start a new sequence
-                    print(f"Final count: {count}")
-                    F.append(count)
-                    print(F)
+                    if current_time - last_clap_time < max_interval:
+                        # If the interval is too large, start a new sequence
+                        print(f"Final count: {count}")
+                        F.append(count)
+                        print(f"F={F}")
+                       
+                    if current_time - last_clap_time > max_interval:
+                       F.append(count)
+                       print(f"F={F}")
+                       P.append(F)
+                       print(f"P={P}")
+                       F=[]
                     count = 1
+
 
                 last_clap_time = current_time
                 ignore_until = current_time + ignore_time
