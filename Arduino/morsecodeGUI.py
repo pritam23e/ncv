@@ -6,87 +6,77 @@ import time
 pygame.init()
 
 # Set up the display
-window_size = (1000, 500)
+window_size = (1000, 500)  # Increased window size
 window = pygame.display.set_mode(window_size)
-pygame.display.set_caption("Morse Code")
+pygame.display.set_caption("Morse Code Detection")
 
 # Define colors
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
-BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-blue = (0, 0, 255)
-orange = (255, 165, 0)
-black = (0, 0, 0)
+BLACK = (0, 0, 0)
 current_color = RED
-font_size = 70
-font = pygame.font.Font(None, font_size)
 
-# Set font for displaying the tap count and array
-font = pygame.font.Font(None, 74)
-small_font = pygame.font.Font(None, 36)
+# Set thresholds for detecting the touch cycle
+downward_peak_threshold = 150  # Value when the sensor is pressed (down peak)
+upward_peak_threshold = 380  # Value when the sensor is released (up peak)
 
-# Open serial port
-ser = serial.Serial('COM3', 19200)
-height = 500
-threshold_value = 850
-debounce_time = 200  # Debounce time in milliseconds
-min_interval = 500  # Minimum interval between claps in a sequence (milliseconds)
-ignore_time = 50  # Ignore time in milliseconds (to ignore subsequent values)
-max_interval = 1500
-count = 0
-last_tap_time = 0
-ignore_until = 0
-F = []
-P = []
-M = []
-# Timer to control the green box display duration
-green_duration = 0.2  # 0.2 seconds to keep the box green
+# Timing for detecting short and long taps
+short_tap_threshold = 0.2  # Duration for a short tap (1)
+long_tap_threshold = 0.25  # Duration for a long tap (5)
 
-# Set maximum sequences to display
-max_sequences = 23
+# Timing for consecutive taps
+min_time_interval = 0.6  # Minimum time between two cycles in milliseconds
+last_upward_time = 0      # Time when the last upward peak occurred
+tap_start_time = 0        # Time when a tap starts
 
-morse_code = {
-    'A': [1, 5],       # .-
-    'B': [5, 1, 1, 1], # -...
-    'C': [5, 1, 5, 1], # -.-.
-    'D': [5, 1, 1],    # -..
-    'E': [1],          # .
-    'F': [1, 1, 5, 1], # ..-.
-    'G': [5, 5, 1],    # --.
-    'H': [1, 1, 1, 1], # ....
-    'I': [1, 1],       # ..
-    'J': [1, 5, 5, 5], # .---
-    'K': [5, 1, 5],    # -.- 
-    'L': [1, 5, 1, 1], # .-..
-    'M': [5, 5],       # --
-    'N': [5, 1],       # -.
-    'O': [5, 5, 5],    # ---
-    'P': [1, 5, 5, 1], # .--.
-    'Q': [5, 5, 1, 5], # --.-
-    'R': [1, 5, 1],    # .-.
-    'S': [1, 1, 1],    # ...
-    'T': [5],          # -
-    'U': [1, 1, 5],    # ..-
-    'V': [1, 1, 1, 5], # ...-
-    'W': [1, 5, 5],    # .--
-    'X': [5, 1, 1, 5], # -..-
-    'Y': [5, 1, 5, 5], # -.-- 
-    'Z': [5, 5, 1, 1], # --..
-    '1': [1, 5, 5, 5, 5],  # .----
-    '2': [1, 1, 5, 5, 5],  # ..---
-    '3': [1, 1, 1, 5, 5],  # ...--
-    '4': [1, 1, 1, 1, 5],  # ....-
-    '5': [1, 1, 1, 1, 1],  # .....
-    '6': [5, 1, 1, 1, 1],  # -....
-    '7': [5, 5, 1, 1, 1],  # --...
-    '8': [5, 5, 5, 1, 1],  # ---..
-    '9': [5, 5, 5, 5, 1],  # ----.
-    '0': [5, 5, 5, 5, 5]   # -----
+# State to track if the sensor is in a touch cycle
+in_touch_cycle = False
+tap_duration = 0          # Duration of a single tap cycle
+F = []                    # List to store the current sequence of taps (1s and 5s)
+P = []                    # List of sequences representing Morse code patterns
+
+# Morse Code Mapping
+morse_code_dict = {
+    (1, 5): 'A', (5, 1, 1, 1): 'B', (5, 1, 5, 1): 'C', (5, 1, 1): 'D',
+    (1,): 'E', (1, 1, 5, 1): 'F', (5, 5, 1): 'G', (1, 1, 1, 1): 'H',
+    (1, 1): 'I', (1, 5, 5, 5): 'J', (5, 1, 5): 'K', (1, 5, 1, 1): 'L',
+    (5, 5): 'M', (5, 1): 'N', (5, 5, 5): 'O', (1, 5, 5, 1): 'P',
+    (5, 5, 1, 5): 'Q', (1, 5, 1): 'R', (1, 1, 1): 'S', (5,): 'T',
+    (1, 1, 5): 'U', (1, 1, 1, 5): 'V', (1, 5, 5): 'W', (5, 1, 1, 5): 'X',
+    (5, 1, 5, 5): 'Y', (5, 5, 1, 1): 'Z',
+
+    # Numbers
+    (5, 5, 5, 5, 5): '0',
+    (1, 5, 5, 5, 5): '1',
+    (1, 1, 5, 5, 5): '2',
+    (1, 1, 1, 5, 5): '3',
+    (1, 1, 1, 1, 5): '4',
+    (1, 1, 1, 1, 1): '5',
+    (5, 1, 1, 1, 1): '6',
+    (5, 5, 1, 1, 1): '7',
+    (5, 5, 5, 1, 1): '8',
+    (5, 5, 5, 5, 1): '9',
+
+    # Punctuation
+    (1, 5, 1, 5, 1, 5): '.',  # Period
+    (5, 5, 1, 1, 5, 5): ',',  # Comma
+    (1, 1, 5, 5, 1, 1): '?',  # Question Mark
+    (1, 5, 5, 5, 5, 1): "'",  # Apostrophe
+    (5, 1, 5, 1, 5, 5): '!',  # Exclamation Mark
+    (5, 1, 1, 5, 1): '   ',   # SPACE
+    (5, 1, 5, 5, 1, 5): '(',  # Left Parenthesis
+    (5, 1, 5, 5, 1, 5): ')',  # Right Parenthesis
 }
 
-# Create a reverse dictionary where Morse code patterns are the keys
-reverse_morse_code = {tuple(v): k for k, v in morse_code.items()}
+# Font for displaying the text
+font = pygame.font.SysFont(None, 50)
+small_font = pygame.font.SysFont(None, 36)
+
+# Open serial port (replace 'COM3' with your port)
+ser = serial.Serial('COM3', 19200)
+time.sleep(2)  # Wait for the serial connection to initialize
+
 running = True
 while running:
     for event in pygame.event.get():
@@ -112,111 +102,77 @@ while running:
                 # If conversion to int fails, skip this iteration
                 continue
 
-            # Get the current time in milliseconds
-            current_time = int(time.time() * 1000)
+            current_time = time.time()
 
-            # Check if sound value is greater than threshold value
-            if sense_value > threshold_value:
-                # Check if the debounce time has passed since the last clap
-                if current_time - last_tap_time > debounce_time and current_time > ignore_until:
-                    current_color = GREEN  # Turn the box green
-                    # Check if the interval between claps is less than min_interval
-                    if current_time - last_tap_time < min_interval:
-                        count += 1
-                    else:
-                        if current_time - last_tap_time < max_interval:
-                            # If the interval is too large, start a new sequence
-                            print(f"Final count: {count}")
-                            if count == 1:
-                                F.append(1)
-                            if count >= 2:
-                                F.append(5)
-                            print(f"F={F}")
+            # Check for the downward peak (touch detected)
+            if not in_touch_cycle and sense_value < downward_peak_threshold:
+                current_color = GREEN  # Turn the box green when touched
+                in_touch_cycle = True  # Mark the start of a touch cycle
+                tap_start_time = current_time  # Record the start time of the tap
 
-                        if current_time - last_tap_time > max_interval:
-                            if count == 1:
-                                F.append(1)
-                            if count >= 2:
-                                F.append(5)
-                            print(f"F={F}")
-                            P.append(F)
-                            if [] in P:
-                                P.remove([])
-                            print(f"P={P}")
-                            F = []
-                            if len(P) >= 1:
-                                code = P[-1]
-                                code_tuple = tuple(code)  # Convert list to tuple to match keys
-                                rm = reverse_morse_code[code_tuple]
-                                M.append(rm)
-                                print(f"M={M}")
-                        count = 1
+            # Check for the upward peak (release detected)
+            if in_touch_cycle and sense_value > upward_peak_threshold:
+                current_color = RED  # Turn the box red when released
+                in_touch_cycle = False  # End the touch cycle
+                tap_duration = current_time - tap_start_time  # Calculate the tap duration
 
-                    last_tap_time = current_time
-                    ignore_until = current_time + ignore_time
-                    print(f"Clap detected! Consecutive count: {count}")
+                # Classify the tap as a short tap (1) or long tap (5)
+                if tap_duration <= short_tap_threshold:
+                    F.append(1)  # Short tap
+                elif tap_duration > long_tap_threshold:
+                    F.append(5)  # Long tap
 
-    # Check if the green box should revert to red after the duration
-    if current_color == GREEN and time.time() - (last_tap_time / 1000) > green_duration:
-        current_color = RED
+                last_upward_time = current_time  # Record the upward peak time
+
+    # Check if the time interval has passed with no new tap (sequence finished)
+    if len(F) > 0 and not in_touch_cycle and (time.time() - last_upward_time) > min_time_interval:
+        P.append(F[:])  # Store the current sequence F in P
+        F.clear()       # Reset F for the next sequence
 
     # Fill the window with a white background
     window.fill(WHITE)
 
-    # Draw the "Final Count" statement in the top left corner
-    final_count_text = small_font.render("Final Count:", True, BLACK)
-    window.blit(final_count_text, (150, 50))
+    # Display "Morse Code Detected" in the top left corner
+    count_text = small_font.render("Detected SEQUENCE", True, BLACK)
+    window.blit(count_text, (10, 10))
 
-    # Draw the box with the current color (Red or Green) in the top middle
-    box_x = (window_size[0] // 2) - 40  # Center the box horizontally
-    box_y = 50  # Position from the top
-    pygame.draw.rect(window, current_color, (box_x, box_y, 80, 80))
+    # Draw the box with the current color (Red or Green)
+    pygame.draw.rect(window, current_color, (250, 70, 100, 100))  # Box with size 100x100
 
-    # Render the current tap count and display it in the box
-    count_text = font.render(str(count), True, BLACK)  # Black color for the text
-    count_text_rect = count_text.get_rect(center=(box_x + 40, box_y + 40))  # Center the count inside the box
-    window.blit(count_text, count_text_rect)
+    # Display the Morse code sequence in the middle of the box
+    morse_sequence = ''.join(map(str, F))
+    sequence_text = font.render(morse_sequence, True, BLACK)
+    window.blit(sequence_text, (270, 100))  # Center the sequence in the middle of the box
 
-    # Draw the graphical array from the middle of the window
-    array_start_x = (window_size[0] - (len(F) * (20 + 10) - 10)) // 2  # Center based on total width of bars
-    array_y = 250        # Y position for all array bars
-    bar_width = 20       # Width of each bar
-    bar_height_factor = 10  # Multiply the count by this to determine bar height
+    # Display "Final Morse Code" in the middle
+    final_sequence_text = small_font.render("Final Morse Code", True, BLACK)
+    window.blit(final_sequence_text, (250, 250))
 
-    # Draw the M array (Morse code representation) below the F array
-    morse_start_y = 300  # Y position for M array
-    morse_start_x = 300  # Same X position as F array
-    
-    # Loop through the array `M` and display each Morse character
-    for i, char in enumerate(M):
-        char_text = small_font.render(char, True, BLACK)  # Render the character
-        window.blit(char_text, (morse_start_x + (i * (bar_width + 10)), morse_start_y))  # Display it below the F bars
+    # Display the corresponding letters for the Morse code sequences in P
+    decoded_text = ''
+    morse_code_display = []  # To store Morse code representations
+    for sequence in P:
+        decoded_letter = morse_code_dict.get(tuple(sequence), '?')  # Get the letter or '?' if not found
+        decoded_text += decoded_letter
+        
+        # Convert the sequence to Morse code format
+        morse_code_str = ''.join(['.' if x == 1 else '- ' for x in sequence])
+        morse_code_display.append(morse_code_str)  # Add Morse code representation
 
-    # Update the display
+    # Create the Morse code representation with partitions
+    morse_code_representation = ' | '.join(morse_code_display)
 
-    x_start = 50  # Initial position on the x-axis
-    for idx, inner_list in enumerate(P):
-        for value in inner_list:
-            if value == 1:
-                # Draw a dot for the value 1
-                dot = font.render('.', True, blue)
-                window.blit(dot, (x_start, height // 2 - font_size // 2))
-                x_start += 10  # Move to the next position (smaller gap)
-            elif value == 5:
-                # Draw an underscore for the value 5
-                bar = font.render('_', True, orange)
-                window.blit(bar, (x_start, height // 2 - font_size // 2))
-                x_start += 40  # Move to the next position (smaller gap)
+    # Render the decoded text (Morse code letters) below "Final Morse Code"
+    decoded_text_surface = font.render(decoded_text, True, BLACK)
+    window.blit(decoded_text_surface, (50, 290))  # Display decoded text below
 
-        # Draw partition between different arrays (except for the last one)
-        if idx < len(P) - 1:
-            partition = font.render('|', True, black)
-            window.blit(partition, (x_start, height // 2 - font_size // 2))
-            x_start += 10  # Space between different sequences
+    # Render the Morse code representation below the decoded text
+    morse_code_surface = font.render(morse_code_representation, True, BLACK)
+    window.blit(morse_code_surface, (50, 330))  # Display Morse code representation below
 
     # Update the display
-    pygame.display.update()
+    pygame.display.flip()
 
-# Clean up
+# Clean up and close the serial port
 ser.close()
 pygame.quit()
