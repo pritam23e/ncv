@@ -15,12 +15,14 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 current_color = RED
 
-# Set threshold for sound detection
-threshold_value = 850
+# Set thresholds for detecting the touch cycle
+downward_peak_threshold = 200  # Value when the sensor is pressed
+upward_peak_threshold = 380  # Value when the sensor is released
+idle_lower_bound = 150  # Normal sensor range (lower bound)
+idle_upper_bound = 350  # Normal sensor range (upper bound)
 
-# Timer to control the green box display duration
-green_duration = 0.2  # time seconds to keep the box green
-last_tap_time = 0
+# State to track if the sensor is in a touch cycle
+in_touch_cycle = False
 
 # Open serial port (replace 'COM3' with your port)
 ser = serial.Serial('COM3', 19200)
@@ -47,19 +49,19 @@ while running:
         if data_decoded:
             try:
                 sense_value = int(data_decoded)
-                
             except ValueError:
                 # If conversion to int fails, skip this iteration
                 continue
 
-            # If sound value exceeds the threshold, turn the box green
-            if sense_value > threshold_value:
-                current_color = GREEN
-                last_tap_time = time.time()  # Record the time of the clap
+            # Check for the downward peak (touch detected)
+            if not in_touch_cycle and sense_value < downward_peak_threshold:
+                current_color = GREEN  # Turn the box green when touched
+                in_touch_cycle = True  # Mark the start of a touch cycle
 
-    # Check if the green box should revert to red after 0.5 seconds
-    if current_color == GREEN and time.time() - last_tap_time > green_duration:
-        current_color = RED
+            # Check for the upward peak (release detected)
+            if in_touch_cycle and sense_value > upward_peak_threshold:
+                current_color = RED  # Turn the box red when released
+                in_touch_cycle = False  # End the touch cycle
 
     # Fill the window with a white background
     window.fill((255, 255, 255))
