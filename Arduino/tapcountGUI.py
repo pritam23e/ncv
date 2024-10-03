@@ -8,26 +8,26 @@ pygame.init()
 # Set up the display
 window_size = (400, 400)
 window = pygame.display.set_mode(window_size)
-pygame.display.set_caption("Tap Counter Box")
+pygame.display.set_caption("Touch Sensor Cycle Counter")
 
 # Define colors
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
+WHITE = (255, 255, 255)
 current_color = RED
 
-# Set font for displaying the tap count
-font = pygame.font.Font(None, 100)
+# Set thresholds for detecting the touch cycle
+downward_peak_threshold = 180  # Value when the sensor is pressed
+upward_peak_threshold = 350  # Value when the sensor is released
 
-# Set threshold for touch detection
-threshold_value = 850
-debounce_time = 180  # Debounce time in milliseconds
-count = 0
-last_tap_time = 0
+# State to track if the sensor is in a touch cycle
+in_touch_cycle = False
+cycle_count = 0  # Counter for completed cycles
 
-# Timer to control the green box display duration
-green_duration = 0.3  # 0.5 seconds to keep the box green
+# Font for displaying the cycle count
+font = pygame.font.SysFont(None, 72)
 
-# Open serial port (replace with your port)
+# Open serial port (replace 'COM3' with your port)
 ser = serial.Serial('COM3', 19200)
 time.sleep(2)  # Wait for the serial connection to initialize
 
@@ -56,30 +56,27 @@ while running:
                 # If conversion to int fails, skip this iteration
                 continue
 
-            # Get the current time in milliseconds
-            current_time = int(time.time() * 1000)
+            # Check for the downward peak (touch detected)
+            if not in_touch_cycle and sense_value < downward_peak_threshold:
+                current_color = GREEN  # Turn the box green when touched
+                in_touch_cycle = True  # Mark the start of a touch cycle
 
-            # Check if touch value is greater than threshold value
-            if sense_value > threshold_value:
-                # Check if the debounce time has passed since the last tap
-                if current_time - last_tap_time > debounce_time:
-                    count += 1
-                    last_tap_time = current_time
-                    current_color = GREEN  # Turn the box green
-    # Check if the green box should revert to red after 0.5 seconds
-    if current_color == GREEN and time.time() - (last_tap_time / 1000) > green_duration:
-        current_color = RED
+            # Check for the upward peak (release detected)
+            if in_touch_cycle and sense_value > upward_peak_threshold:
+                current_color = RED  # Turn the box red when released
+                in_touch_cycle = False  # End the touch cycle
+                cycle_count += 1  # Increment cycle count when one full cycle completes
 
     # Fill the window with a white background
-    window.fill((255, 255, 255))
+    window.fill(WHITE)
 
     # Draw the box with the current color (Red or Green)
     pygame.draw.rect(window, current_color, (100, 100, 200, 200))
 
-    # Render the tap count and display it in the box
-    text = font.render(str(count), True, (0, 0, 0))  # Black color for the text
-    text_rect = text.get_rect(center=(window_size[0] // 2, window_size[1] // 2))
-    window.blit(text, text_rect)
+    # Render the cycle count text
+    count_text = font.render(str(cycle_count), True, WHITE)
+    text_rect = count_text.get_rect(center=(200, 200))  # Center the text in the middle of the box
+    window.blit(count_text, text_rect)
 
     # Update the display
     pygame.display.update()
