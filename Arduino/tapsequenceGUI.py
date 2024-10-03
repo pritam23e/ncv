@@ -6,40 +6,37 @@ import time
 pygame.init()
 
 # Set up the display
-window_size = (1000, 500)
+window_size = (1000, 523)
 window = pygame.display.set_mode(window_size)
-pygame.display.set_caption("Morse Code")
+pygame.display.set_caption("Consecutive Tap Detection")
 
 # Define colors
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
-BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 current_color = RED
 
-# Set font for displaying the tap count and array
-font = pygame.font.Font(None, 74)
-small_font = pygame.font.Font(None, 36)
+# Set thresholds for detecting the touch cycle
+downward_peak_threshold = 150  # Value when the sensor is pressed (down peak)
+upward_peak_threshold = 380  # Value when the sensor is released (up peak)
 
-# Open serial port 
+# State to track if the sensor is in a touch cycle
+in_touch_cycle = False
+tap_count = 0  # Counter for consecutive taps within a cycle
+F = []  # List to store the number of consecutive taps in each sequence
+
+# Timing for consecutive taps
+min_time_interval = 0.6  # Minimum time between upward peak and next down peak (600 ms)
+last_upward_time = 0  # Time when the last upward peak occurred
+
+# Font for displaying the text
+font = pygame.font.SysFont(None, 36)
+small_font = pygame.font.SysFont(None, 24)
+
+# Open serial port (replace 'COM3' with your port)
 ser = serial.Serial('COM3', 19200)
 time.sleep(2)  # Wait for the serial connection to initialize
-
-# Set threshold and debounce values
-threshold_value = 850
-debounce_time = 200  # Debounce time in milliseconds
-min_interval = 500  # Minimum interval between taps in a sequence (milliseconds)
-ignore_time = 50  # Ignore time in milliseconds (to ignore subsequent values)
-count = 0
-last_tap_time = 0
-ignore_until = 0
-F = []  # List to store final counts of claps in each sequence
-
-# Timer to control the green box display duration
-green_duration = 0.2  # 0.2 seconds to keep the box green
-
-# Set maximum sequences to display
-max_sequences = 23
 
 running = True
 while running:
@@ -66,65 +63,51 @@ while running:
                 # If conversion to int fails, skip this iteration
                 continue
 
-            # Get the current time in milliseconds
-            current_time = int(time.time() * 1000)
+            current_time = time.time()
 
-            # Check if touch value is greater than threshold value
-            if sense_value > threshold_value:
-                # Check if the debounce time has passed since the last tap
-                if current_time - last_tap_time > debounce_time and current_time > ignore_until:
-                    # Check if the interval between taps is less than min_interval
-                    if current_time - last_tap_time < min_interval:
-                        count += 1
-                    else:
-                        # If the interval is too large, start a new sequence
-                        if len(F) >= max_sequences:
-                            F.pop(0)  # Remove the oldest count if exceeding max_sequences
-                        F.append(count)  # Store the final count of the sequence
-                        print(f"Final count: {count}")
-                        print(F)
-                        count = 1  # Start new sequence
+            # Check for the downward peak (touch detected)
+            if not in_touch_cycle and sense_value < downward_peak_threshold:
+                current_color = GREEN  # Turn the box green when touched
+                in_touch_cycle = True  # Mark the start of a touch cycle
+                tap_count += 1  # Increment consecutive tap count
 
-                    last_tap_time = current_time
-                    ignore_until = current_time + ignore_time
-                    current_color = GREEN  # Change color to green on tap detection
-                    print(f"Tap detected! Consecutive count: {count}")
+            # Check for the upward peak (release detected)
+            if in_touch_cycle and sense_value > upward_peak_threshold:
+                current_color = RED  # Turn the box red when released
+                in_touch_cycle = False  # End the touch cycle
+                last_upward_time = current_time  # Record the upward peak time
 
-    # Check if the green box should revert to red after the duration
-    if current_color == GREEN and time.time() - (last_tap_time / 1000) > green_duration:
-        current_color = RED
+    # Check if the time interval has passed with no new tap (cycle finished)
+    if tap_count > 0 and not in_touch_cycle and (time.time() - last_upward_time) > min_time_interval:
+        if tap_count > 0:
+            F.append(tap_count)  # Store the tap count in F
+        tap_count = 0  # Reset the tap count for the next sequence
 
     # Fill the window with a white background
     window.fill(WHITE)
 
-    # Draw the "Final Count" statement in the top left corner
-    final_count_text = small_font.render("Final Count:", True, BLACK)
-    window.blit(final_count_text, (150, 50))
+    # Display "Counts Detected" in the top left corner
+    count_text = small_font.render("Counts Detected", True, BLACK)
+    window.blit(count_text, (80, 80))
 
-    # Draw the box with the current color (Red or Green) in the top middle
-    box_x = (window_size[0] // 2) - 40  # Center the box horizontally
-    box_y = 50  # Position from the top
-    pygame.draw.rect(window, current_color, (box_x, box_y, 80, 80))
+    # Draw the smaller box with the current color (Red or Green) and display tap count
+    pygame.draw.rect(window, current_color, (350, 50, 123, 123))  # Smaller box (100x100)
+    clap_text = font.render(str(tap_count), True, WHITE)
+    window.blit(clap_text, (390, 85))  # Center the text in the middle of the box
 
-    # Render the current tap count and display it in the box
-    count_text = font.render(str(count), True, BLACK)  # Black color for the text
-    count_text_rect = count_text.get_rect(center=(box_x + 40, box_y + 40))  # Center the count inside the box
-    window.blit(count_text, count_text_rect)
+    # Display "Final Sequence" in the middle
+    final_sequence_text = small_font.render("Final Sequence", True, BLACK)
+    window.blit(final_sequence_text, (150, 470))
 
-    # Draw the graphical array from the middle of the window
-    array_start_x = (window_size[0] - (len(F) * (20 + 10) - 10)) // 2  # Center based on total width of bars
-    array_y = 250        # Y position for all array bars
-    bar_width = 20       # Width of each bar
-    bar_height_factor = 10  # Multiply the count by this to determine bar height
-
-    # Loop through the array `F` and draw each count as a bar
-    for i, val in enumerate(F):
-        bar_height = val * bar_height_factor  # Calculate bar height based on count
-        pygame.draw.rect(window, BLACK, (array_start_x + (i * (bar_width + 10)), array_y - bar_height, bar_width, bar_height))
-
-        # Display the value of each count below the corresponding bar
-        value_text = small_font.render(str(val), True, BLACK)
-        window.blit(value_text, (array_start_x + (i * (bar_width + 10)), array_y + 10))
+    # Draw the bar graph for F in the bottom left corner
+    if F:
+        bar_width = 23
+        for i, count in enumerate(F):
+            # Draw the bar
+            pygame.draw.rect(window, BLACK, (40 + i * bar_width, 420 - count * 10, bar_width, count * 10))
+            # Display the corresponding count below the bar
+            bar_label = small_font.render(str(count), True, BLACK)
+            window.blit(bar_label, (40 + i * bar_width + 10, 430))
 
     # Update the display
     pygame.display.update()
