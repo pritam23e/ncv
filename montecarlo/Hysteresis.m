@@ -29,21 +29,6 @@ toc
 % Initialize magnetization and field arrays
 magnetization = zeros(1, length(H_vals));
 
-% Function to calculate energy of a given spin configuration
-function E = calculate_energy(spin_lattice, L_rows, L_cols, J, H)
-    E = 0;
-    for i = 1:L_rows
-        for j = 1:L_cols
-            % Sum over nearest neighbors with periodic boundary conditions
-            S = spin_lattice(i, j);
-            neighbors = spin_lattice(mod(i, L_rows) + 1, j) + spin_lattice(mod(i - 2, L_rows) + 1, j) + ...
-                        spin_lattice(i, mod(j, L_cols) + 1) + spin_lattice(i, mod(j - 2, L_cols) + 1);
-            E = E - J * S * neighbors - H * S;
-        end
-    end
-end
-
-
 
 
 
