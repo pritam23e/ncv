@@ -11,6 +11,7 @@ J = 1; % Interaction energy (positive for ferromagnetic material)
 H_vals = linspace(0, 10, 100); % Range of external magnetic field (0 to 10)
 steps_per_H = 50; % Monte Carlo steps for each H value
 T_vals = linspace(0, 5, 10); % Temperature range from 0 to 3
+
 n = 20; % For progress bar
 M_sp = zeros(1, length(T_vals)); % Initialize temperature vs. M_sp plot
 steps = length(T_vals);
