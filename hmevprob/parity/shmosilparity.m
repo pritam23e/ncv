@@ -1,9 +1,9 @@
+% SHM OSCILLATOR PARITY
 clear all
 close all
 
 % Initialize Function
 ddy=@(xl,yl,y1l,El) -(0.5*xl^2)*yl-El*yl;
-
 
 % Parameters
 xi = 0;         % Initial time
@@ -38,15 +38,12 @@ for i=1:Ne
     A=-1*fliplr(X);
     B=p*fliplr(Y);
     X=[A X];
-    Y=[B Y];
-    
-        
+    Y=[B Y];  
     subplot(2, 1, 1);
     plot(X,Y)
     %legends{i} = sprintf('%dth excited state, E = %.6f', i-1, E(i));              
     hold on   
 end
-
 
 subplot(2, 1, 1);
 grid on;
@@ -54,7 +51,6 @@ xlabel('x');
 ylabel('y');
 title('Solution of Potential Well');
 %legend(legends, 'Location', 'best');
-
 
 subplot(2, 1, 2);
 plot(Eo,Ev)
