@@ -26,23 +26,29 @@ for temp_idx = 1:steps
     displayString = [repmat('#', 1, numHashtags), repmat(' ', 1, n - numHashtags)];
     fprintf('[%s]\n', displayString);
     
+    
     % Initialize spin lattice with random spins (-1 or +1)
     spin_lattice = 2 * (randi([0, 1], L_rows, L_cols)) - 1;
+
     
     % Monte Carlo simulation for forward field sweep (0 to 10)
     magnetization = zeros(1, length(H_vals));
     for h = 1:length(H_vals)
         H = H_vals(h); % Current magnetic field
         for step = 1:steps_per_H
+
         
             % Choose a random spin to flip
             i = randi(L_rows);
             j = randi(L_cols);
+
+            
             % Calculate energy difference (dE) if this spin is flipped
             S = spin_lattice(i, j);
             neighbors = spin_lattice(mod(i, L_rows) + 1, j) + spin_lattice(mod(i - 2, L_rows) + 1, j) + ...
                         spin_lattice(i, mod(j, L_cols) + 1) + spin_lattice(i, mod(j - 2, L_cols) + 1);
             dE = 2 * S * (J * neighbors + H);
+
             
             % Metropolis condition
             if dE < 0 || rand() < exp(-dE / T)
@@ -56,12 +62,16 @@ for temp_idx = 1:steps
     H_vals_back = linspace(10, 0, 10);
     magnetization_back = zeros(1, length(H_vals_back));
     spin_lattice_back = spin_lattice; % Start reverse sweep with final lattice state
+
+    
     for h = 1:length(H_vals_back)
         H = H_vals_back(h);
         for step = 1:steps_per_H
             i = randi(L_rows);
             j = randi(L_cols);
             S = spin_lattice_back(i, j);
+
+            
             neighbors = spin_lattice_back(mod(i, L_rows) + 1, j) + spin_lattice_back(mod(i - 2, L_rows) + 1, j) + ...
                         spin_lattice_back(i, mod(j, L_cols) + 1) + spin_lattice_back(i, mod(j - 2, L_cols) + 1);
             dE = 2 * S * (J * neighbors + H);
