@@ -33,6 +33,7 @@ for temp_idx = 1:steps
     
     % Monte Carlo simulation for forward field sweep (0 to 10)
     magnetization = zeros(1, length(H_vals));
+    
     for h = 1:length(H_vals)
         H = H_vals(h); % Current magnetic field
         for step = 1:steps_per_H
@@ -57,6 +58,7 @@ for temp_idx = 1:steps
         end
         magnetization(h) = mean(spin_lattice(:));
     end
+
     
     % Reverse the field sweep: H goes from 10 to 0
     H_vals_back = linspace(10, 0, 10);
