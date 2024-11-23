@@ -1,9 +1,9 @@
+% INFINITE WELL
+
 clear all
 close all
-
 % Initialize Function
 ddy=@(xl,yl,y1l,El) -El*yl;
-
 
 % Parameters
 xi = 0;         % Initial time
@@ -34,14 +34,12 @@ for i=1:Ne
     hold on   
 end
 
-
 subplot(2, 1, 1);
 grid on;
 xlabel('x');
 ylabel('y');
 title('Solution of Potential Well');
 legend(legends, 'Location', 'best');
-
 
 subplot(2, 1, 2);
 plot(Eo,Ev)
