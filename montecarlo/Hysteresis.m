@@ -3,12 +3,12 @@ close all;
 tic
 % MATLAB code for Hysteresis curve using Ising model, Monte Carlo method, and Metropolis conditions
 % Parameters
-L_rows = 10; % Number of rows in lattice
-L_cols = 10; % Number of columns in lattice
+L_rows = 20; % Number of rows in lattice
+L_cols = 20; % Number of columns in lattice
 J = 1; % Interaction energy (positive for ferromagnetic material)
 T = 1.5; % Temperature (in units of J/kB)
-H_vals = linspace(0, 3, 50); % Range of external magnetic field (0 to 10)
-steps_per_H = 50; % Monte Carlo steps for each H value
+H_vals = linspace(0, 3, 100); % Range of external magnetic field (0 to 10)
+steps_per_H = 100; % Monte Carlo steps for each H value
 % Initialize spin lattice with random spins (-1 or +1)
 spin_lattice = 2 * randi([0, 1], L_rows, L_cols) - 1;
 % Display initial lattice configuration
@@ -63,7 +63,7 @@ set(gca, 'YDir', 'normal'); % Reverse y-axis direction
 drawnow;
 toc
 % Reverse the field sweep:
-H_vals_back = linspace(3, -3, 50); % Range of external magnetic field (10 to -10)
+H_vals_back = linspace(3, -3, 100); % Range of external magnetic field (10 to -10)
 magnetization_back = zeros(1, length(H_vals_back));
 % Start reverse sweep from the final lattice state of forward sweep
 spin_lattice_back = spin_lattice;
@@ -102,7 +102,7 @@ set(gca, 'YDir', 'normal'); % Reverse y-axis direction
 drawnow;
 toc
 % Forward the field sweep again:
-H_vals_forw = linspace(-3, 3, 50); % Range of external magnetic field (10 to -10)
+H_vals_forw = linspace(-3, 3, 100); % Range of external magnetic field (10 to -10)
 magnetization_forw = zeros(1, length(H_vals_forw));
 % Start reverse sweep from the final lattice state of forward sweep
 spin_lattice_forw = spin_lattice_back;
